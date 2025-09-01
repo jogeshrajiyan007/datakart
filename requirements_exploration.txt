@@ -1,0 +1,6 @@
+jupyter
+polars
+deltalake
+tinydb
+requests
+streamlit
