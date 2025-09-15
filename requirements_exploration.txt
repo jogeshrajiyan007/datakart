@@ -1,4 +1,6 @@
 jupyter
+pyarrow
+pandas
 polars
 deltalake
 tinydb
@@ -6,3 +8,4 @@ requests
 streamlit
 bcrypt
 flask
+papermill
