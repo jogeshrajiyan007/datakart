@@ -26,6 +26,7 @@ import AdminConsole from './components/Admin/AdminConsole'
 import DataProductManagementAdmin from './components/Admin/DataProductManagement'
 import MarketplaceAnalytics from './components/Admin/MarketplaceAnalytics'
 import ProducerManagement from './components/Admin/ProducerManagement'
+import ForgotPassword  from './components/ForgotPassword'
 
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Account from './components/User/Account'
@@ -33,7 +34,7 @@ import Wishlist from './components/User/Wishlist'
 
 function App() {
   const location = useLocation()
-  const noNavbar = location.pathname === "/register" || location.pathname === "/" || location.pathname === "/signout"
+  const noNavbar = location.pathname === "/register" || location.pathname === "/" || location.pathname === "/signout" || location.pathname === "/forgot-password"
 
   return (
     <>
@@ -43,6 +44,7 @@ function App() {
           <Route path='/' element={<Login/>}/>
           <Route path='/register' element={<Register/>}/>
           <Route path='/signout' element={<Logout/>}/>
+          <Route path='/forgot-password' element={<ForgotPassword/>}/>
         </Routes>
 
         :
