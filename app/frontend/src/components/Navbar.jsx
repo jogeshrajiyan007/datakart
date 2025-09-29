@@ -125,7 +125,6 @@ const navigation = [
     icon: <FolderIcon />,
     items: [
       { title: "My Subscriptions", path: "/data-management/my-subscriptions", icon: <FolderIcon /> },
-      { title: "Request New Dataset", path: "/data-management/request-dataset", icon: <CloudUploadIcon /> },
       { title: "Validation Reports", path: "/data-management/validation", icon: <FactCheckIcon /> },
       { title: "Monitoring", path: "/data-management/monitoring", icon: <MonitorIcon /> },
       { title: "Data Contracts", path: "/data-management/contracts", icon: <GavelIcon /> },
@@ -138,6 +137,7 @@ const navigation = [
     items: [
       { title: "Your Account", path: "/user/account", icon: <AccountCircleIcon /> },
       { title: "Wishlist", path: "/user/wishlist", icon: <FavoriteIcon /> },
+      { title: "Become a Data Producer", path: "/user/become-producer", icon: <CloudUploadIcon /> },
     ],
   },
   {
@@ -145,7 +145,7 @@ const navigation = [
     icon: <ManageAccountsIcon />,
     items: [
       { title: "Producer Console", path: "/producer/console", icon: <SettingsIcon /> },
-      { title: "Data Product Management", path: "/producer/data-product-management", icon: <StorageIcon /> },
+      { title: "Data Product Studio", path: "/producer/data-product-studio", icon: <StorageIcon /> },
       { title: "Consumer Requests", path: "/producer/consumer-requests", icon: <AssignmentIcon /> },
       { title: "Usage Metrics", path: "/producer/product-usage", icon: <InsightsIcon /> },
     ],
@@ -155,7 +155,7 @@ const navigation = [
     icon: <AdminPanelSettingsIcon />,
     items: [
       { title: "Admin Console", path: "/admin/console", icon: <SettingsIcon /> },
-      { title: "Data Product Management", path: "/admin/data-product-management", icon: <StorageIcon /> },
+      { title: "Marketplace Management", path: "/admin/marketplace-management", icon: <StorageIcon /> },
       { title: "Producer Management", path: "/admin/producer-management", icon: <ManageAccountsIcon /> },
       { title: "Marketplace Analytics", path: "/admin/marketplace-analytics", icon: <BarChartIcon /> },
     ],

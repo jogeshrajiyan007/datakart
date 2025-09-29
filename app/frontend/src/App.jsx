@@ -15,15 +15,14 @@ import OrderStatus from './components/Marketplace/OrderStatus'
 import Contracts from './components/DataManagement/Contracts'
 import Monitoring from './components/DataManagement/Monitoring'
 import Observability from './components/DataManagement/Observability'
-import RequestDataset from './components/DataManagement/RequestDataset'
 import Subscriptions from './components/DataManagement/Subscriptions'
 import Validation from './components/DataManagement/Validation'
 import ConsumerRequest from './components/Producer/ConsumerRequest'
-import DataProductManagementProd from './components/Producer/DataProductManagement'
+import ProductStudio from './components/Producer/ProductStudio'
 import ProducerConsole from './components/Producer/ProducerConsole'
 import ProductUsage from './components/Producer/ProductUsage'
 import AdminConsole from './components/Admin/AdminConsole'
-import DataProductManagementAdmin from './components/Admin/DataProductManagement'
+import MarketplaceManagement from './components/Admin/MarketplaceManagement'
 import MarketplaceAnalytics from './components/Admin/MarketplaceAnalytics'
 import ProducerManagement from './components/Admin/ProducerManagement'
 import ForgotPassword  from './components/ForgotPassword'
@@ -31,6 +30,7 @@ import ForgotPassword  from './components/ForgotPassword'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Account from './components/User/Account'
 import Wishlist from './components/User/Wishlist'
+import BecomeProducer from './components/User/BecomeProducer'
 
 function App() {
   const location = useLocation()
@@ -61,19 +61,19 @@ function App() {
               <Route path='/marketplace/cart' element={<Cart/>}/>
               <Route path='/marketplace/order-status' element={<OrderStatus/>}/>
               <Route path='/data-management/my-subscriptions' element={<Subscriptions/>}/>
-              <Route path='/data-management/request-dataset' element={<RequestDataset/>}/>
               <Route path='/data-management/validation' element={<Validation/>}/>
               <Route path='/data-management/monitoring' element={<Monitoring/>}/>
               <Route path='/data-management/contracts' element={<Contracts/>}/>
               <Route path='/data-management/observability' element={<Observability/>}/>
               <Route path='/user/account' element={<Account/>}/>
               <Route path='/user/wishlist' element={<Wishlist/>}/>
+              <Route path='/user/become-producer' element={<BecomeProducer/>}/>
               <Route path='/producer/console' element={<ProducerConsole/>}/>
-              <Route path='/producer/data-product-management' element={<DataProductManagementProd/>}/>
+              <Route path='/producer/data-product-studio' element={<ProductStudio/>}/>
               <Route path='/producer/consumer-requests' element={<ConsumerRequest/>}/>
               <Route path='/producer/product-usage' element={<ProductUsage/>}/>
               <Route path='/admin/console' element={<AdminConsole/>}/>
-              <Route path='/admin/data-product-management' element={<DataProductManagementAdmin/>}/>
+              <Route path='/admin/marketplace-management' element={<MarketplaceManagement/>}/>
               <Route path='/admin/producer-management' element={<ProducerManagement/>}/>
               <Route path='/admin/marketplace-analytics' element={<MarketplaceAnalytics/>}/>
             </Routes>
