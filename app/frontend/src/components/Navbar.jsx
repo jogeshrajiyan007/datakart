@@ -13,12 +13,17 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Collapse from '@mui/material/Collapse';
+import InputBase from '@mui/material/InputBase';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Badge from '@mui/material/Badge';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { alpha } from '@mui/material/styles';
+
+// Icons
 import MenuIcon from '@mui/icons-material/Menu';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
-import { useLocation, useNavigate } from 'react-router-dom';
-
-// Icons
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import TableViewIcon from '@mui/icons-material/TableView';
 import SearchIcon from '@mui/icons-material/Search';
@@ -43,6 +48,8 @@ import InfoIcon from '@mui/icons-material/Info';
 import StorageIcon from '@mui/icons-material/Storage';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import SupportAgentIcon from '@mui/icons-material/HelpOutline';
+
+import datakartLogo from '../assets/datakartLogo.svg';
 
 const drawerWidth = 320;
 
@@ -74,6 +81,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 
 const AppBar = styled(MuiAppBar, { shouldForwardProp: (prop) => prop !== 'open' })(
   ({ theme, open }) => ({
+    backgroundColor: '#001f54',
     zIndex: theme.zIndex.drawer + 1,
     transition: theme.transitions.create(['width', 'margin'], {
       easing: theme.transitions.easing.sharp,
@@ -108,83 +116,119 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
   })
 );
 
+// ------------------ Search ------------------
+const Search = styled('div')(({ theme }) => ({
+  position: 'relative',
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: alpha(theme.palette.common.white, 0.15),
+  '&:hover': { backgroundColor: alpha(theme.palette.common.white, 0.25) },
+  marginRight: theme.spacing(2),
+  marginLeft: 0,
+  width: '100%',
+  [theme.breakpoints.up('sm')]: { marginLeft: theme.spacing(3), width: 'auto' },
+}));
+
+const SearchIconWrapper = styled('div')(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: '100%',
+  position: 'absolute',
+  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: 'inherit',
+  '& .MuiInputBase-input': {
+    padding: theme.spacing(1, 1, 1, 0),
+    // vertical padding + font size from searchIcon
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+    transition: theme.transitions.create('width'),
+    width: '12ch',
+    '&:focus': { width: '20ch' },
+  },
+}));
+
 // ------------------ Navigation ------------------
 const navigation = [
   {
-    title: "Data Marketplace",
+    title: 'Data Marketplace',
     icon: <StorefrontIcon />,
     items: [
-      { title: "Dashboard", path: "/marketplace/dashboard", icon: <DashboardIcon /> },
-      { title: "Browse Data Products", path: "/marketplace/data-products", icon: <SearchIcon /> },
-      { title: "Cart", path: "/marketplace/cart", icon: <ShoppingCartIcon /> },
-      { title: "Order Status", path: "/marketplace/order-status", icon: <AssignmentIcon /> },
+      { title: 'Dashboard', path: '/marketplace/dashboard', icon: <DashboardIcon /> },
+      { title: 'Browse Data Products', path: '/marketplace/data-products', icon: <SearchIcon /> },
+      { title: 'Cart', path: '/marketplace/cart', icon: <ShoppingCartIcon /> },
+      { title: 'Order Status', path: '/marketplace/order-status', icon: <AssignmentIcon /> },
     ],
   },
   {
-    title: "Data Management",
+    title: 'Data Management',
     icon: <FolderIcon />,
     items: [
-      { title: "My Subscriptions", path: "/data-management/my-subscriptions", icon: <FolderIcon /> },
-      { title: "Validation Reports", path: "/data-management/validation", icon: <FactCheckIcon /> },
-      { title: "Monitoring", path: "/data-management/monitoring", icon: <MonitorIcon /> },
-      { title: "Data Contracts", path: "/data-management/contracts", icon: <GavelIcon /> },
-      { title: "Observability", path: "/data-management/observability", icon: <InsightsIcon /> },
+      { title: 'My Subscriptions', path: '/data-management/my-subscriptions', icon: <FolderIcon /> },
+      { title: 'Validation Reports', path: '/data-management/validation', icon: <FactCheckIcon /> },
+      { title: 'Monitoring', path: '/data-management/monitoring', icon: <MonitorIcon /> },
+      { title: 'Data Contracts', path: '/data-management/contracts', icon: <GavelIcon /> },
+      { title: 'Observability', path: '/data-management/observability', icon: <InsightsIcon /> },
     ],
   },
   {
-    title: "User Management",
+    title: 'User Management',
     icon: <AccountCircleIcon />,
     items: [
-      { title: "Your Account", path: "/user/account", icon: <AccountCircleIcon /> },
-      { title: "Wishlist", path: "/user/wishlist", icon: <FavoriteIcon /> },
-      { title: "Become a Data Producer", path: "/user/become-producer", icon: <CloudUploadIcon /> },
+      { title: 'Your Account', path: '/user/account', icon: <AccountCircleIcon /> },
+      { title: 'Wishlist', path: '/user/wishlist', icon: <FavoriteIcon /> },
+      { title: 'Become a Data Producer', path: '/user/become-producer', icon: <CloudUploadIcon /> },
     ],
   },
   {
-    title: "Data Producer",
+    title: 'Data Producer',
     icon: <ManageAccountsIcon />,
     items: [
-      { title: "Producer Console", path: "/producer/console", icon: <SettingsIcon /> },
-      { title: "Data Product Studio", path: "/producer/data-product-studio", icon: <StorageIcon /> },
-      { title: "Consumer Requests", path: "/producer/consumer-requests", icon: <AssignmentIcon /> },
-      { title: "Usage Metrics", path: "/producer/product-usage", icon: <InsightsIcon /> },
+      { title: 'Producer Console', path: '/producer/console', icon: <SettingsIcon /> },
+      { title: 'Data Product Studio', path: '/producer/data-product-studio', icon: <StorageIcon /> },
+      { title: 'Consumer Requests', path: '/producer/consumer-requests', icon: <AssignmentIcon /> },
+      { title: 'Usage Metrics', path: '/producer/product-usage', icon: <InsightsIcon /> },
     ],
   },
   {
-    title: "Admin",
+    title: 'Admin',
     icon: <AdminPanelSettingsIcon />,
     items: [
-      { title: "Admin Console", path: "/admin/console", icon: <SettingsIcon /> },
-      { title: "Marketplace Management", path: "/admin/marketplace-management", icon: <StorageIcon /> },
-      { title: "Producer Management", path: "/admin/producer-management", icon: <ManageAccountsIcon /> },
-      { title: "Marketplace Analytics", path: "/admin/marketplace-analytics", icon: <BarChartIcon /> },
+      { title: 'Admin Console', path: '/admin/console', icon: <SettingsIcon /> },
+      { title: 'Marketplace Management', path: '/admin/marketplace-management', icon: <StorageIcon /> },
+      { title: 'Producer Management', path: '/admin/producer-management', icon: <ManageAccountsIcon /> },
+      { title: 'Marketplace Analytics', path: '/admin/marketplace-analytics', icon: <BarChartIcon /> },
     ],
   },
 ];
 
 // Bottom items
 const bottomNavigation = [
-  { title: "Support", icon: <SupportAgentIcon />, path: "/support" },
-  { title: "Notifications", icon: <NotificationsIcon />, path: "/notifications" },
-  { title: "About DataKart", icon: <InfoIcon />, path: "/about" },
-  { title: "Sign Out", icon: <LogoutIcon />, path: "/signout" },
+  { title: 'Support', icon: <SupportAgentIcon />, path: '/support' },
+  { title: 'Notifications', icon: <NotificationsIcon />, path: '/notifications' },
+  { title: 'About DataKart', icon: <InfoIcon />, path: '/about' },
+  { title: 'Sign Out', icon: <LogoutIcon />, path: '/signout' },
 ];
 
-// ------------------ Navbar ------------------
 export default function Navbar({ content }) {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [open, setOpen] = React.useState(true);
+  const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState({});
   const [tempExpanded, setTempExpanded] = React.useState({});
+
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const accountMenuOpen = Boolean(anchorEl);
 
   React.useEffect(() => {
     const newExpanded = {};
     const checkActive = (items) => {
-      items.forEach(item => {
+      items.forEach((item) => {
         if (item.items) {
-          if (item.items.some(sub => sub.path === location.pathname)) {
+          if (item.items.some((sub) => sub.path === location.pathname)) {
             newExpanded[item.title] = true;
           }
           checkActive(item.items);
@@ -212,6 +256,9 @@ export default function Navbar({ content }) {
     setExpanded(newExpanded);
   };
 
+  const handleAccountClick = (event) => setAnchorEl(event.currentTarget);
+  const handleAccountClose = () => setAnchorEl(null);
+
   const renderNavItems = (items, level = 0) => {
     return items.map((item) => {
       const isActive = item.path === location.pathname;
@@ -219,7 +266,7 @@ export default function Navbar({ content }) {
         <React.Fragment key={item.title}>
           <ListItemButton
             sx={{ pl: 2 + level * 4, bgcolor: isActive ? 'rgba(0,0,0,0.08)' : 'inherit' }}
-            onClick={() => item.items ? handleToggle(item.title) : navigate(item.path)}
+            onClick={() => (item.items ? handleToggle(item.title) : navigate(item.path))}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.title} />
@@ -247,15 +294,77 @@ export default function Navbar({ content }) {
             aria-label="toggle drawer"
             onClick={handleDrawerToggle}
             edge="start"
-            sx={{ marginRight: 5 }}
+            sx={{ marginRight: 2 }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            Data Marketplace
-          </Typography>
+          <Box component="img" 
+              src={datakartLogo} 
+              alt="DataKart Logo"
+              sx={{ width:135,height: 50, mr: 4 }} 
+          />
+
+          {/* Search */}
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
+            <Search sx={{ width: { xs: '100%', sm: '400px', md: '500px' } }}>
+              <SearchIconWrapper>
+                <SearchIcon />
+              </SearchIconWrapper>
+              <StyledInputBase
+                placeholder="Search…"
+                inputProps={{ 'aria-label': 'search' }}
+                sx={{ width: '100%' }}
+              />
+            </Search>
+          </Box>
+
+          {/* Cart Icon */}
+          <IconButton color="inherit" sx={{ mr: 2 }} onClick={() => navigate('/marketplace/cart')}>
+            <Badge badgeContent={0} color="secondary">
+              <ShoppingCartIcon />
+            </Badge>
+          </IconButton>
+
+          {/* Notifications */}
+          <IconButton color="inherit" sx={{ mr: 2 }}>
+            <Badge badgeContent={0} color="error">
+              <NotificationsIcon />
+            </Badge>
+          </IconButton>
+
+          {/* Account Badge */}
+          <IconButton color="inherit" onClick={handleAccountClick}>
+            <AccountCircleIcon />
+          </IconButton>
+          <Menu anchorEl={anchorEl} open={accountMenuOpen} onClose={handleAccountClose}>
+            <MenuItem
+              onClick={() => {
+                navigate('/user/account');
+                handleAccountClose();
+              }}
+            >
+              Your Profile
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                navigate('/signout');
+                handleAccountClose();
+              }}
+            >
+              Sign Out
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                navigate('/support');
+                handleAccountClose();
+              }}
+            >
+              Contact Admin
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
+
       <Drawer variant="permanent" open={open}>
         <DrawerHeader />
         <List>

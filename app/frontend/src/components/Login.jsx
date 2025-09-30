@@ -1,6 +1,6 @@
 import '../App.css';
-import { useState } from 'react';
-import { Box, TextField, IconButton, InputAdornment, Button, CircularProgress, FormControlLabel, Checkbox, Typography } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box, TextField, IconButton, InputAdornment, Button, CircularProgress, Typography } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Controller, useForm } from 'react-hook-form';
 import AxiosInstance from '../utils/AxiosInstance';
@@ -16,29 +16,22 @@ const Login = () => {
   const [failedAttempts, setFailedAttempts] = useState(0);
 
   const { control, handleSubmit } = useForm({
-    defaultValues: {
-      email: '',
-      password: '',
-      remember: false
-    }
+    defaultValues: { email: '', password: '' }
   });
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = sessionStorage.getItem('access_token');
+    if (token) navigate('/marketplace/dashboard', { replace: true });
+  }, [navigate]);
 
   const togglePasswordVisibility = () => setShowPassword(prev => !prev);
 
   const welcome = "Welcome to DataKart!";
   const tagline = "The Marketplace for reliable data exchange.";
 
-  // Typewriter animation for welcome message
-  const letterVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: i => ({ opacity: 1, y: 0, transition: { delay: i * 0.15 } })
-  };
-
-  // Sliding animation for tagline
-  const taglineVariants = {
-    hidden: { opacity: 0, x: -50 },
-    visible: { opacity: 1, x: 0, transition: { duration: 3 } }
-  };
+  const letterVariants = { hidden: { opacity: 0, y: 20 }, visible: i => ({ opacity: 1, y: 0, transition: { delay: i * 0.15 } }) };
+  const taglineVariants = { hidden: { opacity: 0, x: -50 }, visible: { opacity: 1, x: 0, transition: { duration: 3 } } };
 
   const onSubmit = async (data) => {
     setError('');
@@ -49,19 +42,11 @@ const Login = () => {
         password: data.password
       });
 
-      // Save tokens
-      if (data.remember) {
-        localStorage.setItem('access_token', response.data.access);
-        localStorage.setItem('refresh_token', response.data.refresh);
-      } else {
-        sessionStorage.setItem('access_token', response.data.access);
-        sessionStorage.setItem('refresh_token', response.data.refresh);
-      }
+      sessionStorage.setItem('access_token', response.data.access);
+      sessionStorage.setItem('refresh_token', response.data.refresh);
 
-      // Reset failed attempts
       setFailedAttempts(0);
-
-      navigate('/marketplace/dashboard');
+      navigate('/marketplace/dashboard', { replace: true });
     } catch (err) {
       setError('Invalid email or password');
       setFailedAttempts(prev => prev + 1);
@@ -73,9 +58,8 @@ const Login = () => {
 
   return (
     <div className="myBackground">
-      {/* LEFT SIDE - Animated Text */}
+      {/* LEFT SIDE */}
       <Box className="leftBox">
-        {/* Welcome message - Typewriter */}
         <motion.div
           style={{ display: 'flex', flexWrap: 'wrap', fontSize: '3.5rem', fontWeight: 'bold', color: '#FFD700', marginBottom: '20px' }}
           initial="hidden"
@@ -83,17 +67,12 @@ const Login = () => {
           variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
         >
           {welcome.split('').map((char, index) => (
-            <motion.span
-              key={index}
-              custom={index}
-              variants={letterVariants}
-            >
+            <motion.span key={index} custom={index} variants={letterVariants}>
               {char === ' ' ? '\u00A0' : char}
             </motion.span>
           ))}
         </motion.div>
 
-        {/* Tagline - Slide */}
         <motion.div
           style={{ fontSize: '1.5rem', color: '#fff' }}
           initial="hidden"
@@ -104,7 +83,7 @@ const Login = () => {
         </motion.div>
       </Box>
 
-      {/* RIGHT SIDE - Login Box */}
+      {/* RIGHT SIDE */}
       <Box className="whiteBox">
         <Box className="logoBox">
           <img src={Logo} alt="DataKart Logo" className="logoImg" />
@@ -115,15 +94,7 @@ const Login = () => {
             name="email"
             control={control}
             rules={{ required: 'Email is required' }}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Email"
-                type="email"
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-            )}
+            render={({ field }) => <TextField {...field} label="Email" type="email" fullWidth sx={{ mb: 2 }} />}
           />
 
           <Controller
@@ -136,7 +107,7 @@ const Login = () => {
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
                 fullWidth
-                sx={{ mb: 1 }}
+                sx={{ mb: 2 }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -150,28 +121,9 @@ const Login = () => {
             )}
           />
 
-          <Controller
-            name="remember"
-            control={control}
-            render={({ field }) => (
-              <FormControlLabel
-                control={<Checkbox {...field} checked={field.value} />}
-                label="Remember me"
-                sx={{ mb: 2 }}
-              />
-            )}
-          />
-
           {error && <Typography color="error" sx={{ mb: 1 }}>{error}</Typography>}
 
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            className="loginButton"
-            disabled={loading}
-            sx={{ mb: 2 }}
-          >
+          <Button type="submit" variant="contained" fullWidth disabled={loading} sx={{ mb: 2 }}>
             {loading ? <CircularProgress size={24} sx={{ color: '#111' }} /> : 'Sign In'}
           </Button>
         </form>
@@ -187,12 +139,11 @@ const Login = () => {
         )}
       </Box>
 
-      {/* Footer */}
       <Box className="footer">
         © {new Date().getFullYear()} DataKart. All rights reserved.
       </Box>
     </div>
-  )
+  );
 };
 
 export default Login;
