@@ -7,6 +7,7 @@ import AxiosInstance from '../utils/AxiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Logo from '../assets/datakartLogo.svg';
+import { scheduleTokenRefresh } from "../utils/authService";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -44,6 +45,8 @@ const Login = () => {
 
       sessionStorage.setItem('access_token', response.data.access);
       sessionStorage.setItem('refresh_token', response.data.refresh);
+
+      scheduleTokenRefresh(response.data.access, response.data.refresh);
 
       setFailedAttempts(0);
       navigate('/marketplace/dashboard', { replace: true });

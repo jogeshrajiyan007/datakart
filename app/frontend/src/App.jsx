@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import PublicRoute from './utils/PublicRoute';
 import PrivateRoute from './utils/PrivateRoute';
 import NotFound from './utils/NotFound';
+import { useEffect } from "react";
 
 // Components
 import Login from './components/Login';
@@ -33,7 +34,9 @@ import AdminConsole from './components/Admin/AdminConsole';
 import MarketplaceManagement from './components/Admin/MarketplaceManagement';
 import MarketplaceAnalytics from './components/Admin/MarketplaceAnalytics';
 import ProducerManagement from './components/Admin/ProducerManagement';
-import useAutoLogout from './utils/useAutoLogout';
+import { scheduleTokenRefresh } from "./utils/authService";
+import IdleTracker from './utils/IdleTracker';
+
 
 function App() {
   const location = useLocation();
@@ -66,10 +69,18 @@ function App() {
     { path: '/admin/marketplace-analytics', element: <MarketplaceAnalytics /> },
   ];
 
-  useAutoLogout();
+
+  useEffect(() => {
+    const access = sessionStorage.getItem("access_token");
+    const refresh = sessionStorage.getItem("refresh_token");
+    if (access && refresh) {
+      scheduleTokenRefresh(access, refresh);
+    }
+  }, []);
 
   return (
     <>
+      <IdleTracker idleTime={15 * 60 * 1000} warningTime={3 * 60} />
       {noNavbar ? (
         <Routes>
           <Route path='/' element={<PublicRoute><Login /></PublicRoute>} />
