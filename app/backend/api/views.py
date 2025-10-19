@@ -4,8 +4,10 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
 from django.conf import settings
+from firebase_config import storage_bucket
+from rest_framework.parsers import MultiPartParser, FormParser
 import os
 import requests
 
@@ -111,3 +113,41 @@ class LocalConnectorHealthCheckView(APIView):
             return Response(resp.json(), status=resp.status_code)
         except requests.RequestException as e:
             return Response({"detail": str(e)}, status=500)
+
+# ---------------- Firebase Storage File Upload ----------------
+
+class FirebaseFileUploadView(APIView):
+    """
+    Upload files to Firebase Storage (Emulator or Live)
+    """
+    permission_classes = [permissions.AllowAny]
+    parser_classes = (MultiPartParser, FormParser)  # Handles multipart/form-data
+
+    def post(self, request):
+        files = request.FILES.getlist("file")  # <-- get all files
+        if not files:
+            return Response({"detail": "No files uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+        uploaded_names = []
+
+        try:
+            for file_obj in files:
+                print("🔥 Uploading file to Firebase Storage...")
+                print("Bucket name:", storage_bucket.name)
+                print("File name:", file_obj.name)
+                print("Content type:", file_obj.content_type)
+
+                blob = storage_bucket.blob(file_obj.name)
+                blob.upload_from_file(file_obj, content_type=file_obj.content_type)
+                uploaded_names.append(file_obj.name)
+                print("✅ Upload complete:", file_obj.name)
+
+            return Response({
+                "message": "Files uploaded successfully",
+                "files": uploaded_names
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

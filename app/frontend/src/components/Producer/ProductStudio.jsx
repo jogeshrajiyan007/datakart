@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Box, Button, Card, CardContent, Grid, Typography, TextField, Select, MenuItem,
   Snackbar, Alert, Stepper, Step, StepLabel, Dialog, DialogTitle, DialogContent, DialogActions,
-  CircularProgress, RadioGroup, FormControlLabel, Radio
+  CircularProgress, RadioGroup, FormControlLabel, Radio, Chip, LinearProgress
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -17,6 +17,7 @@ import redshiftLogo from "../../assets/redshift.png";
 import oracleLogo from "../../assets/oracle.png";
 import teradataLogo from "../../assets/teradata.png";
 import snowflakeLogo from "../../assets/snowflake.png";
+import AxiosInstance from '../../utils/AxiosInstance';
 
 import "../../styles/product-studio.css";
 
@@ -27,7 +28,6 @@ const STEPS = ["Connect / Upload", "Schema Validation", "Data Quality Checks", "
 const ALL_CONNECTORS = [
   { id: "mysql", category: "sql", icon: <img src={mysqlLogo} alt="MySQL" style={{ width: 130, height: 100 }} /> },
   { id: "postgres", category: "sql", icon: <img src={postgresLogo} alt="PostgreSQL" style={{ width: 130, height: 100 }} /> },
-  { id: "sqlite", category: "sql", icon: <img src={sqliteLogo} alt="SQLite" style={{ width: 130, height: 100 }} /> },
   { id: "oracle", category: "sql", icon: <img src={oracleLogo} alt="Oracle" style={{ width: 130, height: 100 }} /> },
   { id: "mssql", category: "sql", icon: <img src={mssqlLogo} alt="MSSQL" style={{ width: 130, height: 100 }} /> },
   { id: "teradata", category: "sql", icon: <img src={teradataLogo} alt="Teradata" style={{ width: 130, height: 100 }} /> },
@@ -73,7 +73,8 @@ export default function ProductStudio() {
 
   // Connect / Upload
   const [selectedConnector, setSelectedConnector] = useState(null);
-  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({}); 
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState("");
@@ -83,11 +84,11 @@ export default function ProductStudio() {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [isLocal, setIsLocal] = useState("cloud"); // local | cloud
   const [connForm, setConnForm] = useState({
-    host: "localhost",
-    port: "5432",
-    username: "user",
-    password: "password",
-    database: "sample_db",
+    host: "",
+    port: "",
+    username: "",
+    password: "",
+    database: "",
     url: "",
     token: ""
   });
@@ -123,34 +124,36 @@ export default function ProductStudio() {
       setConnSuccess(false);
     } else {
       setSelectedConnector(c);
-      setUploadedFile(null);
+      setUploadedFiles([]);
       setConnSuccess(false);
       setIsLocal("cloud");
-      setConnForm({ host: "localhost", port: "5432", username: "user", password: "password", database: "sample_db", url: "", token: "" });
+      setConnForm({ host: "", port: "", username: "", password: "", database: "", url: "", token: "" });
     }
   };
 
   const onFileChange = (e) => {
-    const file = e.target.files?.[0] ?? null;
-    setUploadedFile(file);
-    if (file) setSelectedConnector("upload");
+    const selectedFiles = Array.from(e.target.files || []); 
+    if (selectedFiles.length > 0) {
+      setUploadedFiles((prev) => [...prev, ...selectedFiles]);
+      setSelectedConnector("upload");
+    }
   };
 
   const canNextStep = useMemo(() => {
     if (activeStep === 0) {
-      if (selectedConnector === "upload") return !!uploadedFile;
+      if (selectedConnector === "upload") return !!uploadedFiles;
       if (selectedConnector && selectedConnector !== "upload") return connSuccess;
       return false;
     }
     return true;
-  }, [activeStep, selectedConnector, uploadedFile, connSuccess]);
+  }, [activeStep, selectedConnector, uploadedFiles, connSuccess]);
 
   const onNext = () => setActiveStep((s) => s + 1);
   const onBack = () => setActiveStep((s) => Math.max(s - 1, 0));
   const resetFlow = () => {
     setActiveStep(0);
     setSelectedConnector(null);
-    setUploadedFile(null);
+    setUploadedFiles([]);
     setConnSuccess(false);
     setSchema(INITIAL_SCHEMA.map((c) => ({ ...c })));
     setProductForm({ domain: "", name: "", summary: "", description: "", owningTeam: "", classification: "" });
@@ -179,30 +182,126 @@ export default function ProductStudio() {
     setConnSuccess(false);
     try {
       if (isLocal === "cloud") {
-        await new Promise(r => setTimeout(r, 1500));
+        // Simulate cloud connection test
+        await new Promise((r) => setTimeout(r, 1500));
         setConnSuccess(true);
       } else {
-        const API_URL = import.meta.env.VITE_API_URL.replace(/\/$/, '');
-        const res = await fetch(`${API_URL}/api/connector/health/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: connForm.url, token: connForm.token })
+        const res = await AxiosInstance.post("/api/connector/health/", {
+          url: connForm.url,
+          token: connForm.token,
         });
 
-        if (!res.ok) throw new Error("Health check failed");
+        console.log("Health check response:", res.data);
 
-        const data = await res.json();
-        console.log("Health check data:", data); // optional debug
-        setConnSuccess(true);
+        if (res.status === 200) {
+          setConnSuccess(true);
+          setSnack({ open: true, message: "Connection successful!", severity: "success" });
+        } else {
+          throw new Error("Non-200 response");
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Connection test failed:", err);
       setConnSuccess(false);
       setSnack({ open: true, message: "Connection failed", severity: "error" });
     } finally {
       setTestingConn(false);
     }
   };
+
+  const handleDownloadConnector = async () => {
+    setTestingConn(true);
+    try {
+      // DEBUG: show what AxiosInstance has for baseURL
+      console.log("AxiosInstance.baseURL =", AxiosInstance?.defaults?.baseURL);
+      const endpoint = "/api/connector/download/";
+      // If AxiosInstance has no baseURL, fall back to env var absolute URL
+      const urlToCall =
+        AxiosInstance?.defaults?.baseURL && AxiosInstance.defaults.baseURL.length
+          ? endpoint
+          : `${import.meta.env.VITE_API_URL?.replace(/\/$/, "")}${endpoint}`;
+
+      console.log("Calling download URL:", urlToCall);
+
+      const response = await AxiosInstance.get(urlToCall, {
+        responseType: "blob",
+        // withCredentials required if you rely on cookies/session auth
+        withCredentials: true,
+        // optional small timeout for visibility
+        timeout: 20000,
+      });
+
+      console.log("Download response (axios):", response);
+
+      // If server returned JSON error in blob form, try to detect it:
+      // (some backends return JSON error with 200 - detect content-type)
+      const contentType = response.headers["content-type"] || "";
+      if (!contentType.includes("application/zip") && !contentType.includes("application/octet-stream")) {
+        console.warn("Unexpected content-type:", contentType);
+      }
+
+      // Extract filename from Content-Disposition if present
+      const disposition = response.headers["content-disposition"] || "";
+      let filename = "local_connector.zip";
+      if (disposition && disposition.includes("filename=")) {
+        filename = disposition.split("filename=")[1].replace(/["']/g, "").trim();
+      }
+
+      // Trigger browser download
+      const blob = new Blob([response.data]);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setSnack({ open: true, message: "Connector downloaded", severity: "success" });
+    } catch (err) {
+      console.error("Download error (detailed):", err);
+      // Axios error shapes: err.response (server reply), err.request (no reply), err.message
+      if (err.response) {
+        console.error("Status:", err.response.status);
+        console.error("Headers:", err.response.headers);
+        // if server sent JSON error body, log text
+        try {
+          // attempt to read blob as text for diagnostics
+          const reader = new FileReader();
+          reader.onload = () => { console.error("Response body (text):", reader.result); };
+          if (err.response.data) reader.readAsText(err.response.data);
+        } catch (e) { /* ignore */ }
+        setSnack({ open: true, message: `Download failed: ${err.response.status}`, severity: "error" });
+      } else if (err.request) {
+        console.error("No response received. Request:", err.request);
+        setSnack({ open: true, message: "No response from server (network/CORS)", severity: "error" });
+      } else {
+        setSnack({ open: true, message: `Error: ${err.message}`, severity: "error" });
+      }
+    } finally {
+      setTestingConn(false);
+    }
+  };
+  const handleFirebaseUpload = async () => {
+    if (!uploadedFiles.length) return;
+
+    const formData = new FormData();
+    uploadedFiles.forEach(file => formData.append("file", file));
+
+    try {
+      const res = await AxiosInstance.post("/api/product/uploadFile/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      console.log("Uploaded:", res.data);
+      setSnack({ open: true, message: "Uploaded to Firebase!", severity: "success" });
+    } catch (err) {
+      console.error("Upload failed:", err);
+      setSnack({ open: true, message: "Firebase upload failed", severity: "error" });
+    }
+  };
+
+
 
 
   /* ---------- Render ---------- */
@@ -234,18 +333,48 @@ export default function ProductStudio() {
                   <Box component="form" onSubmit={(e) => e.preventDefault()}>
 
                     {/* File upload */}
-                    <Box className="upload-block" sx={{ mb: 3 }}>
+                    <Box className="upload-block" sx={{ mb: 3 , p:3}} 
+                    onDragOver={(e) => e.preventDefault()} 
+                    onDrop={(e)=>{
+                      e.preventDefault();
+                      const droppedFiles = Array.from(e.dataTransfer.files);
+                      if (droppedFiles.length > 0){
+                        setUploadedFiles((prev) => [...prev, ...droppedFiles]);
+                        setSelectedConnector("upload");
+                      }
+                    }}>
                       <label htmlFor="file-upload" className="upload-inner">
                         <CloudUploadIcon fontSize="large" />
                         <div>
                           <Typography variant="subtitle1">Upload local dataset</Typography>
-                          <Typography variant="body2" color="text.secondary">Supported: .csv, .json, .xlsx, .zip</Typography>
+                          <Typography variant="body2" color="text.secondary">Supported: .csv, .xlsx, .zip</Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
-                            {uploadedFile ? `Selected: ${uploadedFile.name}` : "Click to choose a file"}
                           </Typography>
                         </div>
                       </label>
-                      <input id="file-upload" type="file" accept=".csv,.json,.xlsx,.zip" onChange={onFileChange} style={{ display: "none" }} />
+                      {/* File Upload Chips */}
+                      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1 }}>
+                        {uploadedFiles.map((file) => (
+                          <Chip
+                            key={file.name}
+                            label={file.name}
+                            onDelete={() =>
+                              setUploadedFiles((prev) => prev.filter((f) => f.name !== file.name))
+                            }
+                          />
+                        ))}
+                      </Box>
+                      <input 
+                        id="file-upload" 
+                        type="file" 
+                        accept=".csv,.xlsx,.zip" 
+                        multiple
+                        onChange={onFileChange} 
+                        style={{ display: "none" }} />
+                      <Button variant="contained" color="primary" onClick={handleFirebaseUpload}>
+                        Upload Files
+                      </Button>
+
                     </Box>
 
                     {/* Connectors */}
@@ -301,7 +430,7 @@ export default function ProductStudio() {
           </>
         )}
 
-        {/* Repository and Pipelines rendering remain unchanged */}
+        {/* Repository and Pipelines rendering Goes Here ------> */}
       </Box>
 
       {/* ---------- Connection Dialog ---------- */}
@@ -319,12 +448,12 @@ export default function ProductStudio() {
                 <>
                   <Button
                     variant="outlined"
-                    href={`${import.meta.env.VITE_API_URL}/api/connector/download/`}
-                    target="_blank"
+                    onClick={handleDownloadConnector}
                     sx={{ mb: 2 }}
                   >
                     Download Local Connector
                   </Button>
+
                   <TextField
                     label="Local Connector URL"
                     size="small"

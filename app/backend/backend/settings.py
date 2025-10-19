@@ -33,8 +33,6 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
-CSRF_TRUSTED_ORIGINS=["https://datakart-production.up.railway.app","http://127.0.0.1:8000/"]
-
 
 # Application definition
 
@@ -64,14 +62,27 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# CORS Settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://datakart.vercel.app"
+    "http://127.0.0.1:5173",
+    "https://datakart.vercel.app",
 ]
+
+CORS_ALLOW_CREDENTIALS = True  # allow cookies / JWT in cross-origin requests
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "X-API-TOKEN",
+    "authorization",
+    "content-type",
 ]
+
+# CSRF trusted origins (no trailing slash!)
+CSRF_TRUSTED_ORIGINS = [
+    "https://datakart-production.up.railway.app",
+    "http://127.0.0.1:8000",
+]
+
 
 AUTH_USER_MODEL = 'api.CustomUser'
 

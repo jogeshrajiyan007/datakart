@@ -6,6 +6,7 @@ from api.views import (
     LogoutView,
     LocalConnectorDownloadView,
     LocalConnectorHealthCheckView,
+    FirebaseFileUploadView
 )
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
@@ -21,6 +22,9 @@ urlpatterns = [
     # Local connector endpoints
     path('connector/download/', LocalConnectorDownloadView.as_view(), name='local_connector_download'),
     path('connector/health/', LocalConnectorHealthCheckView.as_view(), name='local_connector_health'),
+
+    path('product/uploadFile/', FirebaseFileUploadView.as_view(), name='firebase-upload'),
+
 ]
 
 urlpatterns += router.urls
