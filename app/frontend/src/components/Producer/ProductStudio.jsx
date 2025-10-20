@@ -72,7 +72,7 @@ export default function ProductStudio() {
   const [view, setView] = useState("studio"); // studio | repository | pipelines
 
   // Connect / Upload
-  const [selectedConnector, setSelectedConnector] = useState(null);
+  const [selectedConnectors, setSelectedConnectors] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({}); 
 
@@ -82,6 +82,7 @@ export default function ProductStudio() {
 
   // Connection dialog
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [currentConnector, setCurrentConnector] = useState(null);
   const [isLocal, setIsLocal] = useState("cloud"); // local | cloud
   const [connForm, setConnForm] = useState({
     host: "",
@@ -94,6 +95,9 @@ export default function ProductStudio() {
   });
   const [testingConn, setTestingConn] = useState(false);
   const [connSuccess, setConnSuccess] = useState(false);
+  const [connStatus, setConnStatus] = useState({});
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedConnectorForEdit, setSelectedConnectorForEdit] = useState(null);
 
   // Schema
   const [schema, setSchema] = useState(INITIAL_SCHEMA);
@@ -116,18 +120,38 @@ export default function ProductStudio() {
   const [snack, setSnack] = useState({ open: false, message: "", severity: "success" });
 
   /* ---------- Helpers ---------- */
-  const selectable = (id) => selectedConnector === id ? "selected" : "";
+  const selectable = (id) => selectedConnectors.includes(id) ? "selected" : "";
 
-  const onSelectConnector = (c) => {
-    if (c === "upload") {
-      setSelectedConnector("upload");
-      setConnSuccess(false);
+  const onSelectConnector = (id) => {
+    const isAlreadyConnected = connStatus[id];
+    const isAlreadySelected = selectedConnectors.includes(id);
+
+    if (isAlreadyConnected) {
+      // 🔸 If it's already connected → show edit/disconnect dialog
+      setSelectedConnectorForEdit(id);
+      setEditDialogOpen(true);
+    } else if (isAlreadySelected) {
+      // 🔸 If selected but not connected → deselect it
+      setSelectedConnectors((prev) => prev.filter((c) => c !== id));
     } else {
-      setSelectedConnector(c);
-      setUploadedFiles([]);
+      // 🔸 If new selection → open connect dialog
+      setCurrentConnector(id);
+      setConnectDialogOpen(true);
+
+      // ✅ Reset connection form state
+      setConnForm({
+        host: "",
+        port: "",
+        username: "",
+        password: "",
+        database: "",
+        url: "",
+        token: ""
+      });
       setConnSuccess(false);
-      setIsLocal("cloud");
-      setConnForm({ host: "", port: "", username: "", password: "", database: "", url: "", token: "" });
+
+      // Mark as selected
+      setSelectedConnectors((prev) => [...prev, id]);
     }
   };
 
@@ -135,29 +159,65 @@ export default function ProductStudio() {
     const selectedFiles = Array.from(e.target.files || []); 
     if (selectedFiles.length > 0) {
       setUploadedFiles((prev) => [...prev, ...selectedFiles]);
-      setSelectedConnector("upload");
+      setSelectedConnectors((prev) =>
+      prev.includes("upload") ? prev : [...prev, "upload"]
+      );
     }
   };
 
   const canNextStep = useMemo(() => {
     if (activeStep === 0) {
-      if (selectedConnector === "upload") return !!uploadedFiles;
-      if (selectedConnector && selectedConnector !== "upload") return connSuccess;
-      return false;
+      const anyUpload = uploadedFiles.length > 0;
+      const anySelected = selectedConnectors.length > 0;
+      const allConnectionsOk = anySelected && selectedConnectors.every(c => connStatus[c]);
+      return anyUpload || allConnectionsOk;
     }
     return true;
-  }, [activeStep, selectedConnector, uploadedFiles, connSuccess]);
+  }, [activeStep, selectedConnectors, uploadedFiles, connStatus]);
 
   const onNext = () => setActiveStep((s) => s + 1);
   const onBack = () => setActiveStep((s) => Math.max(s - 1, 0));
   const resetFlow = () => {
     setActiveStep(0);
-    setSelectedConnector(null);
+    setSelectedConnectors([]);
     setUploadedFiles([]);
     setConnSuccess(false);
     setSchema(INITIAL_SCHEMA.map((c) => ({ ...c })));
-    setProductForm({ domain: "", name: "", summary: "", description: "", owningTeam: "", classification: "" });
+    setProductForm({
+      domain: "",
+      name: "",
+      summary: "",
+      description: "",
+      owningTeam: "",
+      classification: "",
+    });
+
+    // 🔹 Disconnect all connectors
+    setConnStatus((prev) => {
+      const reset = {};
+      Object.keys(prev).forEach((key) => {
+        reset[key] = false;
+      });
+      return reset;
+    });
+
+    // 🔹 Reset connector form & selection states
+    setCurrentConnector(null);
+    setSelectedConnector(null);
+    setConnForm({
+      host: "",
+      port: "",
+      username: "",
+      password: "",
+      database: "",
+      url: "",
+      token: "",
+    });
+
+    // (Optional) clear any success or snack messages
+    setSnack({ open: false, message: "", severity: "info" });
   };
+
 
   const onAddProduct = () => {
     const newProd = {
@@ -180,22 +240,30 @@ export default function ProductStudio() {
   const testConnection = async () => {
     setTestingConn(true);
     setConnSuccess(false);
+
     try {
       if (isLocal === "cloud") {
         // Simulate cloud connection test
         await new Promise((r) => setTimeout(r, 1500));
         setConnSuccess(true);
+        setConnStatus((prev) => ({
+          ...prev,
+          [currentConnector]: true,  // ✅ Mark current connector as connected
+        }));
+        setSnack({ open: true, message: "Cloud connection successful!", severity: "success" });
       } else {
         const res = await AxiosInstance.post("/api/connector/health/", {
           url: connForm.url,
           token: connForm.token,
         });
 
-        console.log("Health check response:", res.data);
-
         if (res.status === 200) {
           setConnSuccess(true);
-          setSnack({ open: true, message: "Connection successful!", severity: "success" });
+          setConnStatus((prev) => ({
+            ...prev,
+            [currentConnector]: true,  // ✅ Track connection success
+          }));
+          setSnack({ open: true, message: "Local connection successful!", severity: "success" });
         } else {
           throw new Error("Non-200 response");
         }
@@ -203,11 +271,16 @@ export default function ProductStudio() {
     } catch (err) {
       console.error("Connection test failed:", err);
       setConnSuccess(false);
+      setConnStatus((prev) => ({
+        ...prev,
+        [currentConnector]: false,  // ❌ Mark connector as failed
+      }));
       setSnack({ open: true, message: "Connection failed", severity: "error" });
     } finally {
       setTestingConn(false);
     }
   };
+
 
   const handleDownloadConnector = async () => {
     setTestingConn(true);
@@ -294,10 +367,10 @@ export default function ProductStudio() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       console.log("Uploaded:", res.data);
-      setSnack({ open: true, message: "Uploaded to Firebase!", severity: "success" });
+      setSnack({ open: true, message: "Upload completed successfully!", severity: "success" });
     } catch (err) {
       console.error("Upload failed:", err);
-      setSnack({ open: true, message: "Firebase upload failed", severity: "error" });
+      setSnack({ open: true, message: "Upload Failed!", severity: "error" });
     }
   };
 
@@ -340,7 +413,9 @@ export default function ProductStudio() {
                       const droppedFiles = Array.from(e.dataTransfer.files);
                       if (droppedFiles.length > 0){
                         setUploadedFiles((prev) => [...prev, ...droppedFiles]);
-                        setSelectedConnector("upload");
+                        setSelectedConnectors((prev) =>
+                          prev.includes("upload") ? prev : [...prev, "upload"]
+                        );
                       }
                     }}>
                       <label htmlFor="file-upload" className="upload-inner">
@@ -401,26 +476,49 @@ export default function ProductStudio() {
                     </Box>
 
                     <Grid container spacing={2}>
-                      {filteredConnectors.map((c) => (
-                        <Grid item xs={6} sm={3} key={c.id}>
-                          <Card className={`connector-card ${selectable(c.id)}`} onClick={() => onSelectConnector(c.id)}
-                                sx={{ cursor: 'pointer', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)', boxShadow: 6 } }}>
-                            <CardContent sx={{ display: "flex", flexDirection: 'column', alignItems: "center", gap: 1 }}>
-                              <Box sx={{ fontSize: 28 }}>{c.icon}</Box>
-                              <Typography variant="subtitle2">{c.id}</Typography>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                      ))}
+                      {filteredConnectors.map((c) => {
+                        const isConnected = connStatus[c.id]; // ✅ Check per-connector status
+                        const isSelected = selectedConnectors.includes(c.id);
+
+                        return (
+                          <Grid item xs={6} sm={3} key={c.id}>
+                            <Card
+                              className={`connector-card ${isSelected ? "selected" : ""}`}
+                              onClick={() => onSelectConnector(c.id)}
+                              sx={{
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                position: 'relative',
+                                '&:hover': { transform: 'scale(1.05)', boxShadow: 6 },
+                                border: isConnected ? '2px solid #4caf50' : '1px solid rgba(255,255,255,0.12)', // Green border if connected
+                              }}
+                            >
+                              <CardContent sx={{ display: "flex", flexDirection: 'column', alignItems: "center", gap: 1 }}>
+                                <Box sx={{ fontSize: 28 }}>{c.icon}</Box>
+                                <Typography variant="subtitle2" sx={{ textTransform: 'capitalize' }}>
+                                  {c.id}
+                                </Typography>
+
+                                {/* ✅ Show status label */}
+                                {isConnected && (
+                                  <Chip
+                                    label="Connected"
+                                    size="small"
+                                    color="success"
+                                    sx={{ position: "absolute", top: 8, right: 8, fontSize: 10 }}
+                                  />
+                                )}
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        );
+                      })}
                     </Grid>
 
                     <Box className="step-actions" sx={{ mt: 3 }}>
                       <Button type="button" onClick={onBack} disabled>Back</Button>
                       <Box sx={{ flex: 1 }} />
                       <Button type="button" variant="outlined" onClick={resetFlow} sx={{ mr: 1 }}>Reset</Button>
-                      {selectedConnector && selectedConnector !== "upload" && (
-                        <Button type="button" variant="contained" color="secondary" sx={{ mr: 1 }} onClick={() => setConnectDialogOpen(true)}>Connect</Button>
-                      )}
                       <Button type="button" variant="contained" onClick={onNext} disabled={!canNextStep}>Next</Button>
                     </Box>
                   </Box>
@@ -435,9 +533,9 @@ export default function ProductStudio() {
 
       {/* ---------- Connection Dialog ---------- */}
       <Dialog open={connectDialogOpen} onClose={() => setConnectDialogOpen(false)}>
-        <DialogTitle>Configure Connection ({selectedConnector})</DialogTitle>
+        <DialogTitle>Configure Connection ({currentConnector})</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, width: 600 , height: "auto" }}>
-          {selectedConnector === "mysql" || selectedConnector === "postgres" ? (
+          {currentConnector === "mysql" || currentConnector === "postgres" ? (
             <>
               <RadioGroup row value={isLocal} onChange={(e) => setIsLocal(e.target.value)} sx={{ mb: 2 }}>
                 <FormControlLabel value="cloud" control={<Radio />} label="Cloud" />
@@ -513,6 +611,59 @@ export default function ProductStudio() {
           <Button variant="contained" onClick={() => setConnectDialogOpen(false)}>Done</Button>
         </DialogActions>
       </Dialog>
+
+      {/* ---------- Edit/Disconnect Dialog ---------- */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+      >
+        <DialogTitle>Manage Connection ({selectedConnectorForEdit})</DialogTitle>
+        <DialogContent sx={{ width: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="body2">
+            This connector is currently <strong>connected</strong>. What would you like to do?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => {
+              // 🔴 Disconnect
+              setConnStatus((prev) => ({ ...prev, [selectedConnectorForEdit]: false }));
+              setSelectedConnectors((prev) =>
+                prev.filter((c) => c !== selectedConnectorForEdit)
+              );
+              setSnack({ open: true, message: `${selectedConnectorForEdit} disconnected`, severity: "info" });
+              setEditDialogOpen(false);
+            }}
+          >
+            Disconnect
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={() => {
+              // 🟡 Re-open connection dialog for editing
+              setCurrentConnector(selectedConnectorForEdit);
+              setConnectDialogOpen(true);
+              setConnForm({
+                host: "",
+                port: "",
+                username: "",
+                password: "",
+                database: "",
+                url: "",
+                token: ""
+              });
+              setConnSuccess(false);
+              setEditDialogOpen(false);
+            }}
+          >
+            Edit Connection
+          </Button>
+        </DialogActions>
+      </Dialog>
+
 
       <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>
         <Alert severity={snack.severity}>{snack.message}</Alert>
