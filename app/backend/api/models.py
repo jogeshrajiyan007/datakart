@@ -1,5 +1,8 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.conf import settings
+from .utils.crypto import encrypt_text, decrypt_text
+import uuid
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -40,3 +43,54 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+
+class DataSourceConnection(models.Model):
+    """
+    Stores saved cloud connections per user.
+    Passwords are encrypted using Fernet before saving.
+    """
+    connector_id = models.CharField(
+        primary_key=True,
+        max_length=64,
+        default=uuid.uuid4,  # fallback if frontend doesn't send
+        editable=False,
+        unique=True
+    )
+    name = models.CharField(max_length=128, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="connections")
+
+    host = models.CharField(max_length=255, blank=True, null=True)
+    port = models.CharField(max_length=16, blank=True, null=True)
+    username = models.CharField(max_length=128, blank=True, null=True)
+    _password = models.TextField(db_column='password', blank=True, null=True)
+    database = models.CharField(max_length=128, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "connector_id", "host", "port", "username", "database")
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.connector_id} ({self.host}:{self.port}) - {self.user.email}"
+
+    # Encrypt on save
+    def save(self, *args, **kwargs):
+        if self._password and not self._password.startswith("gAAAA"):
+            self._password = encrypt_text(self._password)
+        super().save(*args, **kwargs)
+
+    # Decrypt when accessed
+    @property
+    def password(self):
+        try:
+            return decrypt_text(self._password)
+        except Exception:
+            return None
+
+    @password.setter
+    def password(self, value):
+        self._password = encrypt_text(value) if value else None

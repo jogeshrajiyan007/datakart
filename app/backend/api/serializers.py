@@ -1,6 +1,8 @@
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import serializers
+from .models import DataSourceConnection
+
 
 User = get_user_model()
 
@@ -45,3 +47,35 @@ class MyTokenObtainPairSerializer(serializers.Serializer):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
+
+
+class DataSourceConnectionSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = DataSourceConnection
+        fields = [
+            "connector_id",
+            "name",
+            "host",
+            "port",
+            "username",
+            "password",
+            "database",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:  # only update password if sent
+            instance.password = password  # handled by model’s encryption logic
+        instance.save()
+        return instance

@@ -8,10 +8,13 @@ from django.http import FileResponse, Http404, JsonResponse
 from django.conf import settings
 from firebase_config import storage_bucket
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.decorators import action
+from .models import DataSourceConnection
+from django.shortcuts import get_object_or_404
 import os
 import requests
 
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer, DataSourceConnectionSerializer
 
 User = get_user_model()
 
@@ -151,3 +154,41 @@ class FirebaseFileUploadView(APIView):
             import traceback
             traceback.print_exc()
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ---------------- DataSource Connection ----------------
+class DataSourceConnectionViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for cloud connections per user.
+    """
+    serializer_class = DataSourceConnectionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = "connector_id"  # 👈 Important line
+
+    def get_queryset(self):
+        # Only return connections for the logged-in user
+        return DataSourceConnection.objects.filter(user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete a connection by connector_id (UUID).
+        """
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({"detail": "Connection deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"])
+    def test_connection(self, request, pk=None):
+        """
+        Optional: Test if the connection details work (try connecting to DB or API)
+        """
+        connection = self.get_object()
+        data = {
+            "connector_id": connection.connector_id,
+            "name": connection.name,
+            "host": connection.host,
+            "port": connection.port,
+            "username": connection.username,
+            "database": connection.database,
+        }
+        return Response({"detail": "Connection fetched successfully", "connection": data})

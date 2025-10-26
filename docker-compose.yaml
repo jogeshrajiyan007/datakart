@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  backend:
+    build: ./app/backend
+    container_name: datakart-backend
+    volumes:
+      - ./app/backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./app/backend/.env
+    depends_on:
+      - firebase
+
+  frontend:
+    build: ./app/frontend
+    container_name: datakart-frontend
+    env_file:
+      - ./app/frontend/.env
+    volumes:
+      - ./app/frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+      - firebase
+
+  firebase:
+    image: node:20.19.5-slim
+    container_name: datakart-firebase-emulator
+    working_dir: /app
+    volumes:
+      - ./app/frontend:/app
+      - ./app/frontend/firebase_data:/app/firebase_data
+    ports:
+      - "4000:4000" #Emulator UI
+      - "8080:8080" #Firestore
+      - "9199:9199" #Storage
+    command: >
+      sh -c "apt-get update && apt-get install -y openjdk-17-jdk && npm install -g firebase-tools &&
+      firebase emulators:start --project datakart --import=/app/firebase_data --export-on-exit"
